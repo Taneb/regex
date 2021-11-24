@@ -14,7 +14,7 @@ open DecSetoid Alphabet renaming (Carrier to A)
 
 data RegularLanguage : Set c where
   ∅ : RegularLanguage
-  S : A → RegularLanguage
+  lit : A → RegularLanguage
   _⋆ : RegularLanguage → RegularLanguage
   _∪_ : RegularLanguage → RegularLanguage → RegularLanguage
   _；_ : RegularLanguage → RegularLanguage → RegularLanguage
@@ -30,11 +30,11 @@ data Acceptsε : RegularLanguage → Set c where
   -- if both s and r accept the empty string, then s ； r accepts the empty string
   ；Acceptsε : ∀ s r → Acceptsε s → Acceptsε r → Acceptsε (s ； r)
   -- ∅ does not accept the empty string as it does not accept anything
-  -- S x does not accept the empty string as it only accepts x
+  -- lit x does not accept the empty string as it only accepts x
 
 acceptsε? : Unary.Decidable Acceptsε
 acceptsε? ∅ = no (λ ())
-acceptsε? (S x) = no (λ ())
+acceptsε? (lit x) = no (λ ())
 acceptsε? (x ⋆) = yes (⋆Acceptsε x)
 acceptsε? (s ∪ r) with acceptsε? s | acceptsε? r
 ... | yes p | q = yes (∪Acceptsεˡ s r p)
@@ -47,7 +47,7 @@ acceptsε? (s ； r) with acceptsε? s | acceptsε? r
 
 δ : A → RegularLanguage → RegularLanguage
 δ x ∅ = ∅
-δ x (S c) with x ≟ c
+δ x (lit c) with x ≟ c
 ... | yes _ = ∅ ⋆
 ... | no  _ = ∅
 δ x (r ⋆) = δ x r ； (r ⋆)
