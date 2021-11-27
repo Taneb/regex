@@ -1,4 +1,4 @@
-{-# OPTIONS --safe --without-K #-}
+{-# OPTIONS --without-K #-}
 
 open import Relation.Binary
 
@@ -6,12 +6,24 @@ module Regex.Properties {c ℓ} (Alphabet : DecSetoid c ℓ) where
 
 open import Regex Alphabet
 
+open import Algebra.Bundles
 open import Algebra.Definitions _≈RL_
+open import Algebra.Structures _≈RL_
+import Algebra.Solver.CommutativeMonoid as CMSolver
+open import Data.Fin.Base using (zero; suc)
 open import Data.List
 open import Data.Product
+open import Data.Vec.Base using (_∷_; [])
 open import Relation.Nullary
+open import Relation.Binary.PropositionalEquality
 import Relation.Binary.Reasoning.Setoid as SetoidReasoning
 
+-- is this what I want?
+δ*-∪ : ∀ r s xs → δ* (r ∪ s) xs ≡ δ* r xs ∪ δ* s xs
+δ*-∪ r s [] = refl
+δ*-∪ r s (x ∷ xs) = δ*-∪ (δ x r) (δ x s) xs
+
+-- _≈RL_ is an equivalence relation
 ≈RL-refl : Reflexive _≈RL_
 ≈RL-refl xs = (λ p → p) , λ p → p
 
@@ -31,6 +43,7 @@ import Relation.Binary.Reasoning.Setoid as SetoidReasoning
 RL-setoid : Setoid c c
 RL-setoid = record { isEquivalence = ≈RL-isEquivalence }
 
+-- Algebraic properties of regular languages
 ∪-cong : Congruent₂ _∪_
 ∪-cong {x} {y} {u} {v} x≈y u≈v [] = lemma₁ , lemma₂
   where
@@ -100,6 +113,52 @@ RL-setoid = record { isEquivalence = ≈RL-isEquivalence }
     lemma₂ p = ∪Acceptsεˡ r r p
 ∪-idempotent r (x ∷ xs) = ∪-idempotent (δ x r) xs
 
+∪-isMagma : IsMagma _∪_
+∪-isMagma = record
+  { isEquivalence = ≈RL-isEquivalence
+  ; ∙-cong = ∪-cong
+  }
+
+∪-isSemigroup : IsSemigroup _∪_
+∪-isSemigroup = record
+  { isMagma = ∪-isMagma
+  ; assoc = ∪-assoc
+  }
+
+∪-isBand : IsBand _∪_
+∪-isBand = record
+  { isSemigroup = ∪-isSemigroup
+  ; idem = ∪-idempotent
+  }
+
+∪-isCommutativeSemigroup : IsCommutativeSemigroup _∪_
+∪-isCommutativeSemigroup = record
+  { isSemigroup = ∪-isSemigroup
+  ; comm = ∪-comm
+  }
+
+∪-∅-isMonoid : IsMonoid _∪_ ∅
+∪-∅-isMonoid = record
+  { isSemigroup = ∪-isSemigroup
+  ; identity = ∪-identityˡ , ∪-identityʳ
+  }
+
+∪-∅-isCommutativeMonoid : IsCommutativeMonoid _∪_ ∅
+∪-∅-isCommutativeMonoid = record
+  { isMonoid = ∪-∅-isMonoid
+  ; comm = ∪-comm
+  }
+
+∪-∅-isIdempotentCommutativeMonoid : IsIdempotentCommutativeMonoid _∪_ ∅
+∪-∅-isIdempotentCommutativeMonoid = record
+  { isCommutativeMonoid = ∪-∅-isCommutativeMonoid
+  ; idem = ∪-idempotent
+  }
+
+∪-∅-commutativeMonoid : CommutativeMonoid c c
+∪-∅-commutativeMonoid = record { isCommutativeMonoid = ∪-∅-isCommutativeMonoid }
+
+{-# TERMINATING #-} -- this shouldn't be necessary!
 ；-distribˡ-∪ : _；_ DistributesOverˡ _∪_
 ；-distribˡ-∪ r s t [] = lemma₁ , lemma₂
   where
@@ -111,48 +170,15 @@ RL-setoid = record { isEquivalence = ≈RL-isEquivalence }
     lemma₂ (∪Acceptsεˡ .(r ； s) .(r ； t) (；Acceptsε .r .s p₁ p₂)) = ；Acceptsε r (s ∪ t) p₁ (∪Acceptsεˡ s t p₂)
     lemma₂ (∪Acceptsεʳ .(r ； s) .(r ； t) (；Acceptsε .r .t p₁ p₂)) = ；Acceptsε r (s ∪ t) p₁ (∪Acceptsεʳ s t p₂)
 ；-distribˡ-∪ r s t (x ∷ xs) with acceptsε? r
--- (δ x s ∪ δ x t) ∪ (δ x r ； (s ∪ t))
--- (δ x s ∪ δ x t) ∪ ((δ x r ； s) ∪ (δ x r ； t))
--- ((δ x s ∪ δ x t) ∪ (δ x r ； s)) ∪ (δ x r ； t)
--- (δ x s ∪ (δ x t ∪ (δ x r ； s))) ∪ (δ x r ； t)
--- (δ x s ∪ ((δ x r ； s) ∪ δ x t)) ∪ (δ x r ； t)
--- ((δ x s ∪ (δ x r ； s)) ∪ δ x t) ∪ (δ x r ； t)
--- (δ x s ∪ (δ x r ； s)) ∪ (δ x t ∪ (δ x r ； t))
-... | yes _ = lemma₁ , lemma₂
+... | yes _ = (begin
+  ((δ x s ∪ δ x t) ∪ (δ x r ； (s ∪ t))) ≈⟨ ∪-cong ≈RL-refl (；-distribˡ-∪ (δ x r) s t) ⟩ -- Agda can't infer that this step is sound, because it's far away from the xs
+  ((δ x s ∪ δ x t) ∪ ((δ x r ； s) ∪ (δ x r ； t))) ≈⟨ prove 4 ((v₁ ⊕ v₂) ⊕ (v₃ ⊕ v₄)) ((v₁ ⊕ v₃) ⊕ (v₂ ⊕ v₄)) (δ x s ∷ δ x t ∷ (δ x r ； s) ∷ (δ x r ； t) ∷ []) ⟩
+  ((δ x s ∪ (δ x r ； s)) ∪ (δ x t ∪ (δ x r ； t))) ∎) xs
   where
-    lemma₁ : Accepts ((δ x s ∪  δ x t) ∪ (δ x r ； (s ∪ t))) xs → Accepts ((δ x s ∪ (δ x r ； s)) ∪ (δ x t ∪ (δ x r ； t))) xs
-    lemma₁ p = {!proj₁ (；-distribˡ-∪ (δ x r) s t xs)!}
-
-    lemma₂ : Accepts ((δ x s ∪ (δ x r ； s)) ∪ (δ x t ∪ (δ x r ； t))) xs → Accepts ((δ x s ∪ δ x t) ∪ (δ x r ； (s ∪ t))) xs
-    lemma₂ p = {!proj₂ (；-distribˡ-∪ (δ x r) s t xs)!}
+    open SetoidReasoning RL-setoid
+    open CMSolver ∪-∅-commutativeMonoid
+    v₁ = var zero
+    v₂ = var (suc zero)
+    v₃ = var (suc (suc zero))
+    v₄ = var (suc (suc (suc zero)))
 ... | no  _ = ；-distribˡ-∪ (δ x r) s t xs
-
-；-assoc : Associative _；_
-；-assoc r s t [] = lemma₁ , lemma₂
-  where
-    lemma₁ : Accepts ((r ； s) ； t) [] → Accepts (r ； (s ； t)) []
-    lemma₁ (；Acceptsε .(r ； s) .t (；Acceptsε .r .s p₁ p₂) p₃) = ；Acceptsε r (s ； t) p₁ (；Acceptsε s t p₂ p₃)
-
-    lemma₂ : Accepts (r ； (s ； t)) [] → Accepts ((r ； s) ； t) []
-    lemma₂ (；Acceptsε .r .(s ； t) p₁ (；Acceptsε .s .t p₂ p₃)) = ；Acceptsε (r ； s) t (；Acceptsε r s p₁ p₂) p₃
-；-assoc r s t (x ∷ xs) with acceptsε? r in rr
-... | no ¬p rewrite rr = ；-assoc (δ x r) s t xs
-... | yes p with acceptsε? s in ss
---   Accepts (δ x t ∪ ((δ x s ∪ (δ x r ； s)) ； t)) xs
--- ↔ Accepts ((δ x t ∪ (δ x s ； t)) ∪ (δ x r ； (s ； t))) xs
-
---    δ x t ∪ ((δ x s ∪ (δ x r ； s)) ； t)
--- ≈ (δ x t ∪ (δ x s ； t)) ∪ (δ x r ； (s ； t))
-
-
--- δ x t ∪ ((δ x s ∪ (δ x r ； s)) ； t)
---   by ∪-cong ∪-distrib-；
--- δ x t ∪ ((δ x s ； t) ∪ ((δ x r ； s) ； t))
---
--- δ x t ∪ ((δ x s ； t) ∪ (δ x r ； (s ； t)))
---
--- (δ x t ∪ (δ x s ； t)) ∪ (δ x r ； (s ； t))
-
-... | yes q rewrite rr rewrite ss = {!!}
-... | no ¬q = {!!}
-
