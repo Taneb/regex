@@ -66,6 +66,9 @@ Accepts r xs = Acceptsε (δ* r xs)
 accepts? : (r : RegularLanguage) (xs : List A) → Dec (Accepts r xs)
 accepts? r xs = acceptsε? (δ* r xs)
 
+⟨_⟩_≈RL_ : List A → Rel RegularLanguage c
+⟨ xs ⟩ s ≈RL r = (Accepts s xs → Accepts r xs) × (Accepts r xs → Accepts s xs)
+
 _≈RL_ : Rel RegularLanguage c
-s ≈RL r = ∀ xs → (Accepts s xs → Accepts r xs) × (Accepts r xs → Accepts s xs)
+s ≈RL r = ∀ xs → ⟨ xs ⟩ s ≈RL r
 
