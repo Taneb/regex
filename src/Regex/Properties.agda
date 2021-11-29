@@ -284,6 +284,70 @@ module _ where
   ... | no ¬p | yes q rewrite rr = ⟨ xs ⟩-；-assoc (δ x r) s t
   ... | no ¬p | no ¬q rewrite rr = ⟨ xs ⟩-；-assoc (δ x r) s t
 
+  ⟨_⟩-；-zeroˡ : ∀ xs → LeftZero ⟨ xs ⟩_≈RL_ ∅ _；_
+  ⟨ [] ⟩-；-zeroˡ r = lemma₁ , lemma₂
+    where
+      lemma₁ : Accepts (∅ ； r) [] → Accepts ∅ []
+      lemma₁ (；Acceptsε .∅ .r () _)
+
+      lemma₂ : Accepts ∅ [] → Accepts (∅ ； r) []
+      lemma₂ ()
+  ⟨ x ∷ xs ⟩-；-zeroˡ r with acceptsε? ∅
+  ... | no ¬p = ⟨ xs ⟩-；-zeroˡ r
+
+  ⟨_⟩-；-zeroʳ : ∀ xs → RightZero ⟨ xs ⟩_≈RL_ ∅ _；_
+  ⟨ [] ⟩-；-zeroʳ r = lemma₁ , lemma₂
+    where
+      lemma₁ : Accepts (r ； ∅) [] → Accepts ∅ []
+      lemma₁ (；Acceptsε .r .∅ _ ())
+
+      lemma₂ : Accepts ∅ [] → Accepts (r ； ∅) []
+      lemma₂ ()
+  ⟨ x ∷ xs ⟩-；-zeroʳ r with acceptsε? r
+  ... | yes p = begin
+    (∅ ∪ (δ x r ； ∅)) ≈⟨ ⟨ xs ⟩-∪-identityˡ (δ x r ； ∅) ⟩
+    (δ x r ； ∅) ≈⟨ ⟨ xs ⟩-；-zeroʳ (δ x r) ⟩
+    ∅ ∎
+    where
+      open SetoidReasoning ⟨ xs ⟩RL-setoid
+  ... | no ¬p = ⟨ xs ⟩-；-zeroʳ (δ x r)
+
+  ⟨_⟩-；-identityˡ : ∀ xs → LeftIdentity ⟨ xs ⟩_≈RL_ (∅ ⋆) _；_
+  ⟨ [] ⟩-；-identityˡ r = lemma₁ , lemma₂
+    where
+      lemma₁ : Accepts ((∅ ⋆) ； r) [] → Accepts r []
+      lemma₁ (；Acceptsε .(∅ ⋆) .r (⋆Acceptsε .∅) p) = p
+
+      lemma₂ : Accepts r [] → Accepts ((∅ ⋆) ； r) []
+      lemma₂ p = ；Acceptsε (∅ ⋆) r (⋆Acceptsε ∅) p
+  ⟨ x ∷ xs ⟩-；-identityˡ r with acceptsε? (∅ ⋆)
+  ... | yes p = begin
+    (δ x r ∪ ((∅ ； (∅ ⋆)) ； r)) ≈⟨ ⟨ xs ⟩-∪-cong ⟨ xs ⟩≈RL-refl (⟨ xs ⟩-；-assoc ∅ (∅ ⋆) r) ⟩
+    (δ x r ∪ (∅ ； ((∅ ⋆) ； r))) ≈⟨ ⟨ xs ⟩-∪-cong ⟨ xs ⟩≈RL-refl (⟨ xs ⟩-；-zeroˡ ((∅ ⋆) ； r)) ⟩
+    (δ x r ∪ ∅) ≈⟨ ⟨ xs ⟩-∪-identityʳ (δ x r) ⟩
+    δ x r ∎
+    where
+      open SetoidReasoning ⟨ xs ⟩RL-setoid
+  ... | no ¬p = ⊥-elim (¬p (⋆Acceptsε ∅))
+
+  ⟨_⟩-；-identityʳ : ∀ xs → RightIdentity ⟨ xs ⟩_≈RL_ (∅ ⋆) _；_
+  ⟨ [] ⟩-；-identityʳ r = lemma₁ , lemma₂
+    where
+      lemma₁ : Accepts (r ； (∅ ⋆)) [] → Accepts r []
+      lemma₁ (；Acceptsε .r .(∅ ⋆) p (⋆Acceptsε .∅)) = p
+
+      lemma₂ : Accepts r [] → Accepts (r ； (∅ ⋆)) []
+      lemma₂ p = ；Acceptsε r (∅ ⋆) p (⋆Acceptsε ∅)
+  ⟨ x ∷ xs ⟩-；-identityʳ r with acceptsε? r
+  ... | yes p = begin
+    ((∅ ； (∅ ⋆)) ∪ (δ x r ； (∅ ⋆))) ≈⟨ ⟨ xs ⟩-∪-cong (⟨ xs ⟩-；-zeroˡ (∅ ⋆)) ⟨ xs ⟩≈RL-refl ⟩
+    (∅ ∪ (δ x r ； (∅ ⋆))) ≈⟨ ⟨ xs ⟩-∪-identityˡ (δ x r ； (∅ ⋆)) ⟩
+    (δ x r ； (∅ ⋆)) ≈⟨ ⟨ xs ⟩-；-identityʳ (δ x r) ⟩
+    δ x r ∎
+    where
+      open SetoidReasoning ⟨ xs ⟩RL-setoid
+  ... | no ¬p = ⟨ xs ⟩-；-identityʳ (δ x r)
+
 module _ where
   open Algebra.Definitions _≈RL_
   open Algebra.Structures _≈RL_
@@ -360,3 +424,14 @@ module _ where
   ；-assoc : Associative _；_
   ；-assoc r s t xs = ⟨ xs ⟩-；-assoc r s t
 
+  ；-zeroˡ : LeftZero ∅ _；_
+  ；-zeroˡ r xs = ⟨ xs ⟩-；-zeroˡ r
+
+  ；-zeroʳ : RightZero ∅ _；_
+  ；-zeroʳ r xs = ⟨ xs ⟩-；-zeroʳ r
+
+  ；-identityˡ : LeftIdentity (∅ ⋆) _；_
+  ；-identityˡ r xs = ⟨ xs ⟩-；-identityˡ r
+
+  ；-identityʳ : RightIdentity (∅ ⋆) _；_
+  ；-identityʳ r xs = ⟨ xs ⟩-；-identityʳ r
