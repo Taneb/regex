@@ -415,6 +415,24 @@ module _ where
   ∪-∅-commutativeMonoid : CommutativeMonoid c c
   ∪-∅-commutativeMonoid = record { isCommutativeMonoid = ∪-∅-isCommutativeMonoid }
 
+  ；-cong : Congruent₂ _；_
+  ；-cong {x} {y} {u} {v} x≈y u≈v [] = lemma₁ , lemma₂
+    where
+      lemma₁ : Accepts (x ； u) [] → Accepts (y ； v) []
+      lemma₁ (；Acceptsε .x .u p q) = ；Acceptsε y v (proj₁ (x≈y []) p) (proj₁ (u≈v []) q)
+
+      lemma₂ : Accepts (y ； v) [] → Accepts (x ； u) []
+      lemma₂ (；Acceptsε .y .v p q) = ；Acceptsε x u (proj₂ (x≈y []) p) (proj₂ (u≈v []) q)
+  ；-cong {x} {y} {u} {v} x≈y u≈v (a ∷ as) with acceptsε? x | acceptsε? y
+  ... | yes p | yes q = begin
+    (δ a u ∪ (δ a x ； u)) ≈⟨ ⟨ as ⟩-∪-cong (u≈v (a ∷ as)) (；-cong (λ as′ → x≈y (a ∷ as′)) u≈v as) ⟩
+    (δ a v ∪ (δ a y ； v)) ∎
+    where
+      open SetoidReasoning ⟨ as ⟩RL-setoid
+  ... | no ¬p | yes q = ⊥-elim (¬p (proj₂ (x≈y []) q))
+  ... | yes p | no ¬q = ⊥-elim (¬q (proj₁ (x≈y []) p))
+  ... | no ¬p | no ¬q = ；-cong (λ as′ → x≈y (a ∷ as′)) u≈v as
+
   ；-distribˡ-∪ : _；_ DistributesOverˡ _∪_
   ；-distribˡ-∪ r s t xs = ⟨ xs ⟩-；-distribˡ-∪ r s t
 
